@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,6 +9,7 @@ import { ChromePicker } from "react-color";
 
 export default function BgRemover() {
   const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState("#ffffff");
@@ -18,8 +19,17 @@ export default function BgRemover() {
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles[0]) {
       setImage(acceptedFiles[0]);
+      setImagePreview(URL.createObjectURL(acceptedFiles[0]));
     }
   };
+
+  useEffect(() => {
+    return () => {
+      // Cleanup object URLs when component unmounts
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (processedImage) URL.revokeObjectURL(processedImage);
+    };
+  }, [imagePreview, processedImage]);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: { "image/*": [] },
@@ -44,7 +54,7 @@ export default function BgRemover() {
         method: "POST",
         headers: {
           "X-Api-Key": "yjvnCpDCuVcPsYAAJxSsg6FA",
-          "Accept": "application/json",
+          "Accept": "image/png",
         },
         body: formData,
       });
@@ -53,11 +63,16 @@ export default function BgRemover() {
       setProgress(100);
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       const blob = await response.blob();
-      setProcessedImage(URL.createObjectURL(blob));
+      if (processedImage) {
+        URL.revokeObjectURL(processedImage);
+      }
+      const imageUrl = URL.createObjectURL(blob);
+      setProcessedImage(imageUrl);
     } catch (error) {
       console.error(error);
       toast({
@@ -70,10 +85,18 @@ export default function BgRemover() {
 
   const handleDownload = () => {
     if (processedImage) {
-      const link = document.createElement("a");
-      link.href = processedImage;
-      link.download = "processed-image.png";
-      link.click();
+      fetch(processedImage)
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "processed-image.png";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+        });
     }
   };
 
@@ -95,7 +118,7 @@ export default function BgRemover() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           <div
             {...getRootProps()}
             className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer"
@@ -107,6 +130,32 @@ export default function BgRemover() {
 
           {image && (
             <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Original Image Preview */}
+                {imagePreview && (
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Original Image</h3>
+                    <img
+                      src={imagePreview}
+                      alt="Original"
+                      className="w-full rounded-lg border"
+                    />
+                  </div>
+                )}
+
+                {/* Processed Image Preview */}
+                {processedImage && (
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Processed Image</h3>
+                    <img
+                      src={processedImage}
+                      alt="Processed"
+                      className="w-full rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-4">
                 <div className="flex flex-col gap-4">
                   <Button
@@ -144,19 +193,12 @@ export default function BgRemover() {
               )}
 
               {processedImage && (
-                <div className="space-y-4">
-                  <img
-                    src={processedImage}
-                    alt="Processed"
-                    className="max-w-full rounded-lg"
-                  />
-                  <Button
-                    onClick={handleDownload}
-                    className="w-full"
-                  >
-                    Download
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleDownload}
+                  className="w-full"
+                >
+                  Download
+                </Button>
               )}
             </>
           )}
