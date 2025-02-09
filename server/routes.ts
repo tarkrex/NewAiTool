@@ -14,40 +14,42 @@ export function registerRoutes(app: any): Server {
         return res.status(400).json({ message: "Prompt is required" });
       }
 
-      console.log("Sending request to ModelsLab API with prompt:", prompt);
+      console.log("Sending request to Stability AI API with prompt:", prompt);
 
-      const modelslabApiKey = "sk-DsevMHpd0tOSZoQDZQsZPXWhooZjjBeUKHPxx49sGd5tcP04";
-      const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
+      const stabilityApiKey = "sk-DsevMHpd0tOSZoQDZQsZPXWhooZjjBeUKHPxx49sGd5tcP04";
+      const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${modelslabApiKey}`,
+          'Authorization': `Bearer ${stabilityApiKey}`,
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
-          key: modelslabApiKey,
-          prompt,
-          model_id: 'sdxl',
-          samples: 1,
-          steps: 20,
-          aspect_ratio: '1:1',
-          guidance_scale: 7.5,
-          seed: -1
+          text_prompts: [
+            {
+              text: prompt,
+              weight: 1
+            }
+          ],
+          cfg_scale: 7,
+          height: 1024,
+          width: 1024,
+          steps: 30,
+          samples: 1
         })
       });
 
       const data = await response.json();
-      console.log("ModelsLab API response:", data);
+      console.log("Stability AI API response:", data);
 
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} - ${data.message || 'Unknown error'}`);
       }
 
-      if (data.status === "error") {
-        throw new Error(data.message || "Failed to generate image");
-      }
-
-      if (data.status === "success" && data.output && data.output[0]) {
-        res.json({ url: data.output[0] });
+      if (data.artifacts && data.artifacts.length > 0) {
+        const base64Image = data.artifacts[0].base64;
+        const imageUrl = `data:image/png;base64,${base64Image}`;
+        res.json({ url: imageUrl });
       } else {
         throw new Error("No image generated in the response");
       }
