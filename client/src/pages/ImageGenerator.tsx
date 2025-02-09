@@ -16,33 +16,21 @@ export default function ImageGenerator() {
 
     setLoading(true);
     try {
-      const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
+      const response = await fetch('/api/images/generate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: prompt,
-          negative_prompt: "",
-          width: 512,
-          height: 512,
-          samples: 1,
-          num_inference_steps: 20,
-          guidance_scale: 7.5
-        })
+        body: JSON.stringify({ prompt })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+        const error = await response.json();
+        throw new Error(error.message || "Failed to generate image");
       }
 
       const data = await response.json();
-      if (data.images && data.images[0]) {
-        setGeneratedImage(data.images[0]);
-      } else {
-        throw new Error("No image generated");
-      }
+      setGeneratedImage(data.url);
     } catch (error) {
       console.error(error);
       toast({
@@ -57,12 +45,18 @@ export default function ImageGenerator() {
 
   const handleDownload = () => {
     if (generatedImage) {
-      const link = document.createElement("a");
-      link.href = generatedImage;
-      link.download = "generated-image.png";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      fetch(generatedImage)
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "generated-image.png";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+        });
     }
   };
 
@@ -86,7 +80,7 @@ export default function ImageGenerator() {
               <img
                 src={generatedImage}
                 alt="Generated"
-                className="max-w-full rounded-lg"
+                className="max-w-full rounded-lg border"
               />
               <Button
                 onClick={handleDownload}
