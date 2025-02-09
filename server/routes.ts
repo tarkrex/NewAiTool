@@ -1,4 +1,3 @@
-import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -6,7 +5,7 @@ import { insertImageSchema } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-export function registerRoutes(app: Express): Server {
+export function registerRoutes(app: any): Server {
   app.post("/api/images/generate", async (req, res) => {
     try {
       const { prompt } = req.body;
@@ -17,7 +16,7 @@ export function registerRoutes(app: Express): Server {
 
       console.log("Sending request to ModelsLab API with prompt:", prompt);
 
-      const modelslabApiKey = "ml-QUVcwV3jbTxmGFvL"; // Your ModelsLab API key
+      const modelslabApiKey = "sk-DsevMHpd0tOSZoQDZQsZPXWhooZjjBeUKHPxx49sGd5tcP04";
       const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
         method: 'POST',
         headers: {
