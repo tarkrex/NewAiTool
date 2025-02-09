@@ -15,12 +15,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "Prompt is required" });
       }
 
+      console.log("Sending request to ModelsLab API with prompt:", prompt);
+
       const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-KEY': 'ml-QUVcwV3jbTxmGFvL', // ModelsLab API key
         },
         body: JSON.stringify({
+          key: 'ml-QUVcwV3jbTxmGFvL', // ModelsLab API key in body
           prompt,
           model_id: 'sdxl',
           samples: 1,
@@ -32,6 +36,11 @@ export function registerRoutes(app: Express): Server {
       });
 
       const data = await response.json();
+      console.log("ModelsLab API response:", data);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} - ${data.message || 'Unknown error'}`);
+      }
 
       if (data.status === "error") {
         throw new Error(data.message || "Failed to generate image");
@@ -40,7 +49,7 @@ export function registerRoutes(app: Express): Server {
       if (data.status === "success" && data.output && data.output[0]) {
         res.json({ url: data.output[0] });
       } else {
-        throw new Error("No image generated");
+        throw new Error("No image generated in the response");
       }
     } catch (error) {
       console.error("Image generation error:", error);
