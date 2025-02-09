@@ -16,18 +16,41 @@ export default function ImageGenerator() {
 
     setLoading(true);
     try {
-      // Note: API integration will be added later when API key is provided
-      toast({
-        title: "API Not Configured",
-        description: "Image generation API will be integrated later",
+      const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          negative_prompt: "",
+          width: 512,
+          height: 512,
+          samples: 1,
+          num_inference_steps: 20,
+          guidance_scale: 7.5
+        })
       });
-      setLoading(false);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+
+      const data = await response.json();
+      if (data.images && data.images[0]) {
+        setGeneratedImage(data.images[0]);
+      } else {
+        throw new Error("No image generated");
+      }
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
-        description: "Failed to generate image",
+        description: error instanceof Error ? error.message : "Failed to generate image",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -37,7 +60,9 @@ export default function ImageGenerator() {
       const link = document.createElement("a");
       link.href = generatedImage;
       link.download = "generated-image.png";
+      document.body.appendChild(link);
       link.click();
+      link.remove();
     }
   };
 
@@ -78,12 +103,13 @@ export default function ImageGenerator() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Enter your image prompt..."
               className="flex-1"
+              disabled={loading}
             />
             <Button
               onClick={handleGenerate}
               disabled={loading || !prompt}
             >
-              <Send className="h-4 w-4" />
+              <Send className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
