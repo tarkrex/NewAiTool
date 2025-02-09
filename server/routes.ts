@@ -17,14 +17,15 @@ export function registerRoutes(app: Express): Server {
 
       console.log("Sending request to ModelsLab API with prompt:", prompt);
 
+      const modelslabApiKey = "ml-QUVcwV3jbTxmGFvL"; // Your ModelsLab API key
       const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': 'ml-QUVcwV3jbTxmGFvL', // ModelsLab API key
+          'Authorization': `Bearer ${modelslabApiKey}`,
         },
         body: JSON.stringify({
-          key: 'ml-QUVcwV3jbTxmGFvL', // ModelsLab API key in body
+          key: modelslabApiKey,
           prompt,
           model_id: 'sdxl',
           samples: 1,
