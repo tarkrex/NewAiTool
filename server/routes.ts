@@ -3,10 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { insertImageSchema } from "@shared/schema";
-import OpenAI from "openai";
 
 const upload = multer({ storage: multer.memoryStorage() });
-const openai = new OpenAI();
 
 export function registerRoutes(app: Express): Server {
   app.post("/api/images/generate", async (req, res) => {
@@ -17,16 +15,33 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "Prompt is required" });
       }
 
-      const response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
+      const response = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          model_id: 'sdxl',
+          samples: 1,
+          steps: 20,
+          aspect_ratio: '1:1',
+          guidance_scale: 7.5,
+          seed: -1
+        })
       });
 
-      const imageUrl = response.data[0].url;
-      res.json({ url: imageUrl });
+      const data = await response.json();
+
+      if (data.status === "error") {
+        throw new Error(data.message || "Failed to generate image");
+      }
+
+      if (data.status === "success" && data.output && data.output[0]) {
+        res.json({ url: data.output[0] });
+      } else {
+        throw new Error("No image generated");
+      }
     } catch (error) {
       console.error("Image generation error:", error);
       res.status(500).json({ 

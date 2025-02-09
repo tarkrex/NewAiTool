@@ -18,8 +18,11 @@ export default function BgRemover() {
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles[0]) {
-      setImage(acceptedFiles[0]);
-      setImagePreview(URL.createObjectURL(acceptedFiles[0]));
+      const file = acceptedFiles[0];
+      setImage(file);
+      // Create URL for preview
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
 
@@ -34,6 +37,7 @@ export default function BgRemover() {
   const { getRootProps, getInputProps } = useDropzone({
     accept: { "image/*": [] },
     onDrop,
+    maxFiles: 1,
   });
 
   const handleRemoveBackground = async () => {
@@ -54,7 +58,6 @@ export default function BgRemover() {
         method: "POST",
         headers: {
           "X-Api-Key": "yjvnCpDCuVcPsYAAJxSsg6FA",
-          "Accept": "image/png",
         },
         body: formData,
       });
@@ -85,23 +88,14 @@ export default function BgRemover() {
 
   const handleDownload = () => {
     if (processedImage) {
-      fetch(processedImage)
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = "processed-image.png";
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-        });
+      // Create a temporary anchor element
+      const link = document.createElement("a");
+      link.href = processedImage;
+      link.download = "processed-image.png"; // Set the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
-  };
-
-  const handleColorPickerClose = () => {
-    setShowColorPicker(false);
   };
 
   return (
@@ -121,7 +115,7 @@ export default function BgRemover() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div
             {...getRootProps()}
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer"
+            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
           >
             <input {...getInputProps()} />
             <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -135,11 +129,13 @@ export default function BgRemover() {
                 {imagePreview && (
                   <div className="space-y-2">
                     <h3 className="font-medium">Original Image</h3>
-                    <img
-                      src={imagePreview}
-                      alt="Original"
-                      className="w-full rounded-lg border"
-                    />
+                    <div className="relative aspect-square rounded-lg border overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Original"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -147,11 +143,13 @@ export default function BgRemover() {
                 {processedImage && (
                   <div className="space-y-2">
                     <h3 className="font-medium">Processed Image</h3>
-                    <img
-                      src={processedImage}
-                      alt="Processed"
-                      className="w-full rounded-lg border"
-                    />
+                    <div className="relative aspect-square rounded-lg border overflow-hidden" style={{ backgroundColor: bgColor }}>
+                      <img
+                        src={processedImage}
+                        alt="Processed"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -165,18 +163,14 @@ export default function BgRemover() {
                     Choose Background Color
                   </Button>
                   {showColorPicker && (
-                    <div className="relative">
-                      <ChromePicker
-                        color={bgColor}
-                        onChange={(color: any) => setBgColor(color.hex)}
-                        className="mx-auto"
-                      />
-                      <Button
-                        onClick={handleColorPickerClose}
-                        className="mt-2 w-full"
-                      >
-                        OK
-                      </Button>
+                    <div className="relative z-10">
+                      <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+                      <div className="absolute">
+                        <ChromePicker
+                          color={bgColor}
+                          onChange={(color) => setBgColor(color.hex)}
+                        />
+                      </div>
                     </div>
                   )}
                   <Button
