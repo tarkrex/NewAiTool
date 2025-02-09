@@ -12,6 +12,7 @@ export default function BgRemover() {
   const [progress, setProgress] = useState(0);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState("#ffffff");
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const { toast } = useToast();
 
   const onDrop = (acceptedFiles: File[]) => {
@@ -29,8 +30,9 @@ export default function BgRemover() {
     if (!image) return;
 
     const formData = new FormData();
-    formData.append("image", image);
-    formData.append("bgColor", bgColor);
+    formData.append("image_file", image);
+    formData.append("size", "auto");
+    formData.append("bg_color", bgColor.replace("#", ""));
 
     try {
       setProgress(0);
@@ -42,6 +44,7 @@ export default function BgRemover() {
         method: "POST",
         headers: {
           "X-Api-Key": "yjvnCpDCuVcPsYAAJxSsg6FA",
+          "Accept": "application/json",
         },
         body: formData,
       });
@@ -49,14 +52,17 @@ export default function BgRemover() {
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (!response.ok) throw new Error("Failed to remove background");
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
 
       const blob = await response.blob();
       setProcessedImage(URL.createObjectURL(blob));
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
-        description: "Failed to remove background",
+        description: error instanceof Error ? error.message : "Failed to remove background",
         variant: "destructive",
       });
     }
@@ -69,6 +75,10 @@ export default function BgRemover() {
       link.download = "processed-image.png";
       link.click();
     }
+  };
+
+  const handleColorPickerClose = () => {
+    setShowColorPicker(false);
   };
 
   return (
@@ -98,17 +108,35 @@ export default function BgRemover() {
           {image && (
             <>
               <div className="space-y-4">
-                <ChromePicker
-                  color={bgColor}
-                  onChange={(color) => setBgColor(color.hex)}
-                  className="mx-auto"
-                />
-                <Button
-                  onClick={handleRemoveBackground}
-                  className="w-full"
-                >
-                  Remove Background
-                </Button>
+                <div className="flex flex-col gap-4">
+                  <Button
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    variant="outline"
+                  >
+                    Choose Background Color
+                  </Button>
+                  {showColorPicker && (
+                    <div className="relative">
+                      <ChromePicker
+                        color={bgColor}
+                        onChange={(color: any) => setBgColor(color.hex)}
+                        className="mx-auto"
+                      />
+                      <Button
+                        onClick={handleColorPickerClose}
+                        className="mt-2 w-full"
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleRemoveBackground}
+                    className="w-full"
+                  >
+                    Remove Background
+                  </Button>
+                </div>
               </div>
 
               {progress > 0 && progress < 100 && (
