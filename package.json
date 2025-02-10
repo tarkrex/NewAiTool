@@ -4,7 +4,7 @@
   "homepage": "https://tarkrex.github.io/NewAiTool",
   "scripts": {
     "predeploy": "npm run build",
-   "deploy": "gh-pages -d dist"
+   "deploy": "gh-pages -d build"
   },
   "dependencies": {
     "react": "^18.0.0",
