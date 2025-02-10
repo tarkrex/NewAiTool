@@ -1,4 +1,21 @@
 {
+  "name": "NewAiTool",
+  "version": "1.0.0",
+  "homepage": "https://tarkrex.github.io/NewAiTool",
+  "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "gh-pages": "^5.0.0"
+  }
+}
+
+{
   "name": "rest-express",
   "version": "1.0.0",
   "type": "module",
